@@ -14,11 +14,11 @@ import java.util.Set;
 
 @Repository
 public class DepartmentDaoImpl implements DepartmentDao {
-    private EntityManager entityManager;
+    private EntityManager eM;
 
     public DepartmentDaoImpl() {
 
-        entityManager = DbContext.getEntityManager();
+        eM = DbContext.getEntityManager();
     }
 
     @Override
@@ -27,18 +27,18 @@ public class DepartmentDaoImpl implements DepartmentDao {
         Session session = null;
         try {
             // Create new session
-            session = entityManager.unwrap(Session.class);
+            session = eM.unwrap(Session.class);
 
             // Query: null or not null
             // SELECT d FROM Department d WHERE d.id = :id
 
             Department department = session.get(Department.class, id);
 
-//            // Proxy object - design pattern
-//            Set<Job> actualJobs = department.getJobs(); // dept_id = 1L
-//
-//            // query
-//            System.out.println(department.getDepartmentName() + "\t" + department.getJobs().size());
+            // Proxy object - design pattern
+            Set<Job> actualJobs = department.getJobs(); // dept_id = 1L
+
+            // query
+            System.out.println(department.getDepartmentName() + "\t" + department.getJobs().size());
 
             return department;
         } catch (Exception ex) {
@@ -54,10 +54,10 @@ public class DepartmentDaoImpl implements DepartmentDao {
     public List<Department> findByName(String name) {
         // Connection
         Session session = null;
-        entityManager = DbContext.getEntityManager();
+        eM = DbContext.getEntityManager();
         try {
             // Create new session
-            session = entityManager.unwrap(Session.class);
+            session = eM.unwrap(Session.class);
 
             Query<Department> query = session.createNamedQuery("findDepartmentByName", Department.class);
             query.setParameter("name", name);
@@ -77,10 +77,10 @@ public class DepartmentDaoImpl implements DepartmentDao {
         EntityTransaction transaction = null;
 
         try {
-            transaction = entityManager.getTransaction();
+            transaction = eM.getTransaction();
             transaction.begin();
 
-            entityManager.persist(department);
+            eM.persist(department);
 
             transaction.commit();
 
