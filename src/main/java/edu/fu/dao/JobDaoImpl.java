@@ -12,18 +12,18 @@ import java.util.List;
 
 @Repository
 public class JobDaoImpl implements JobDao {
-    private EntityManager entityManager;
+    private EntityManager e;
 
     public JobDaoImpl() {
-        entityManager = DbContext.getEntityManager();
+        e = DbContext.getEntityManager();
     }
 
     @Override
     public Job findById(Long id) {
         Session session = null;
         try {
-            entityManager = DbContext.getEntityManager();
-            session = entityManager.unwrap(Session.class);
+            e = DbContext.getEntityManager();
+            session = e.unwrap(Session.class);
 
             return session.find(Job.class, id);
 
@@ -45,14 +45,14 @@ public class JobDaoImpl implements JobDao {
 
     @Override
     public Job createJob(Job job) {
-        entityManager = DbContext.getEntityManager();
+        e = DbContext.getEntityManager();
         EntityTransaction tx = null;
 
         try {
-            tx = entityManager.getTransaction();
+            tx = e.getTransaction();
             tx.begin();
 
-            entityManager.persist(job);
+            e.persist(job);
 
             tx.commit();
         } catch (Exception e) {
@@ -67,7 +67,7 @@ public class JobDaoImpl implements JobDao {
     @Override
     public List<Job> findAllJobs() {
 
-        TypedQuery typedQuery = entityManager.createQuery(
+        TypedQuery typedQuery = e.createQuery(
                 "SELECT j FROM Job j", Job.class);
 
         return typedQuery.getResultList();
@@ -76,7 +76,7 @@ public class JobDaoImpl implements JobDao {
     @Override
     public boolean isExisted(String title) {
         // Try with resources
-        try (Session session = entityManager.unwrap(Session.class);) {
+        try (Session session = e.unwrap(Session.class);) {
            Long result = session.createQuery("SELECT COUNT(j) FROM Job j WHERE j.title = :title", Long.class)
                     .setParameter("title", title)
                     .getSingleResult();
