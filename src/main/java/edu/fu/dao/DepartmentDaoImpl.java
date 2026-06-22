@@ -10,65 +10,50 @@ import org.hibernate.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
 public class DepartmentDaoImpl implements DepartmentDao {
-    private EntityManager entityManager;
+    private EntityManager entityMgt;
 
     public DepartmentDaoImpl() {
-
-        entityManager = DbContext.getEntityManager();
+        entityMgt = DbContext.getEntityManager();
     }
 
+    /**
+     * HoaNK - HE195013 - Test git
+     */
     @Override
+
     public Department findById(long id) {
-        // Connection
-        Session session = null;
         try {
-            // Create new session
-            session = entityManager.unwrap(Session.class);
-
-            // Query: null or not null
-            // SELECT d FROM Department d WHERE d.id = :id
-
-            Department department = session.get(Department.class, id);
-
-//            // Proxy object - design pattern
-//            Set<Job> actualJobs = department.getJobs(); // dept_id = 1L
-//
-//            // query
-//            System.out.println(department.getDepartmentName() + "\t" + department.getJobs().size());
-
-            return department;
+            // Tìm kiếm và bọc kết quả vào Optional để xử lý null an toàn
+            return Optional.ofNullable(entityMgt.find(Department.class, id))
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban với ID: " + id));
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (session != null) {
-                session.close();  // NullPointerException
-            }
+            throw new RuntimeException("Hệ thống gặp sự cố khi truy vấn", ex);
         }
     }
 
     @Override
+    public void delete(Long id) {
+
+    }
+
+    @Override
     public List<Department> findByName(String name) {
-        // Connection
-        Session session = null;
-        entityManager = DbContext.getEntityManager();
         try {
-            // Create new session
-            session = entityManager.unwrap(Session.class);
+            // Lấy EntityManager và tạo TypedQuery trực tiếp, không cần unwrap Session
+            entityMgt = DbContext.getEntityManager();
 
-            Query<Department> query = session.createNamedQuery("findDepartmentByName", Department.class);
-            query.setParameter("name", name);
-
-            return query.getResultList();
+            return entityMgt.createNamedQuery("findDepartmentByName", Department.class)
+                    .setParameter("name", name)
+                    .getResultList();
         } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (session != null) {
-                session.close();  // NullPointerException
-            }
+            throw new RuntimeException("Lỗi khi tìm kiếm phòng ban theo tên: " + name, ex);
         }
     }
 
@@ -77,10 +62,10 @@ public class DepartmentDaoImpl implements DepartmentDao {
         EntityTransaction transaction = null;
 
         try {
-            transaction = entityManager.getTransaction();
+            transaction = entityMgt.getTransaction();
             transaction.begin();
 
-            entityManager.persist(department);
+            entityMgt.persist(department);
 
             transaction.commit();
 
@@ -98,10 +83,6 @@ public class DepartmentDaoImpl implements DepartmentDao {
         return null;
     }
 
-    @Override
-    public void delete(Long id) {
-
-    }
 
     @Override
     public List<Department> findAll() {
