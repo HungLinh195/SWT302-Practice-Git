@@ -1,110 +1,108 @@
 package edu.fu.dao;
 
 import edu.fu.entities.Department;
-import edu.fu.entities.Job;
 import edu.fu.utils.DbContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
-import org.hibernate.Session;
-import org.hibernate.query.Query;
+import jakarta.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Set;
 
 @Repository
 public class DepartmentDaoImpl implements DepartmentDao {
-    private EntityManager entityManager;
+
+    // EntityManager nên được giữ xuyên suốt vòng đời của DAO
+    private final EntityManager entityManager;
 
     public DepartmentDaoImpl() {
-
-        entityManager = DbContext.getEntityManager();
+        this.entityManager = DbContext.getEntityManager();
     }
 
     @Override
     public Department findById(long id) {
-        // Connection
-        Session session = null;
         try {
-            // Create new session
-            session = entityManager.unwrap(Session.class);
-
-            // Query: null or not null
-            // SELECT d FROM Department d WHERE d.id = :id
-
-            Department department = session.get(Department.class, id);
-
-//            // Proxy object - design pattern
-//            Set<Job> actualJobs = department.getJobs(); // dept_id = 1L
-//
-//            // query
-//            System.out.println(department.getDepartmentName() + "\t" + department.getJobs().size());
-
-            return department;
+            // Sử dụng trực tiếp EntityManager của JPA, không cần unwrap sang Hibernate Session
+            // Hàm find() tự động trả về null nếu không tìm thấy, không lo NullPointerException
+            return entityManager.find(Department.class, id);
         } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (session != null) {
-                session.close();  // NullPointerException
-            }
+            throw new RuntimeException("Lỗi khi tìm phòng ban theo ID: " + id, ex);
         }
+        // KHÔNG đóng entityManager hoặc session ở đây vì nó được quản lý tập trung bởi DbContext
     }
 
     @Override
     public List<Department> findByName(String name) {
-        // Connection
-        Session session = null;
-        entityManager = DbContext.getEntityManager();
         try {
-            // Create new session
-            session = entityManager.unwrap(Session.class);
-
-            Query<Department> query = session.createNamedQuery("findDepartmentByName", Department.class);
-            query.setParameter("name", name);
+            // Sử dụng TypedQuery chuẩn JPA thay vì Query của Hibernate
+            TypedQuery<Department> query = entityManager.createNamedQuery("findDepartmentByName", Department.class);
+            query.setParameter("name", "%" + name + "%"); // Hỗ trợ tìm kiếm gần đúng nếu cần
 
             return query.getResultList();
         } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (session != null) {
-                session.close();  // NullPointerException
-            }
+            throw new RuntimeException("Lỗi khi tìm phòng ban theo tên: " + name, ex);
         }
     }
 
     @Override
     public Department create(Department department) {
-        EntityTransaction transaction = null;
-
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
-            transaction = entityManager.getTransaction();
             transaction.begin();
-
             entityManager.persist(department);
-
             transaction.commit();
-
             return department;
-
         } catch (Exception e) {
-            transaction.rollback();
-            throw new RuntimeException(e);
+            if (transaction != null && transaction.isActive()) {
+                transaction.rollback();
+            }
+            throw new RuntimeException("Lỗi khi tạo mới phòng ban", e);
         }
-
     }
 
     @Override
     public Department update(Department department) {
-        return null;
+        EntityTransaction transaction = entityManager.getTransaction();
+        try {
+            transaction.begin();
+            // merge() dùng để cập nhật thực thể (hoặc thêm mới nếu chưa tồn tại)
+            Department updatedDepartment = entityManager.merge(department);
+            transaction.commit();
+            return updatedDepartment;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                transaction.rollback();
+            }
+            throw new RuntimeException("Lỗi khi cập nhật phòng ban", e);
+        }
     }
 
     @Override
     public void delete(Long id) {
-
+        EntityTransaction transaction = entityManager.getTransaction();
+        try {
+            transaction.begin();
+            Department department = entityManager.find(Department.class, id);
+            if (department != null) {
+                entityManager.remove(department);
+            }
+            transaction.commit();
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                transaction.rollback();
+            }
+            throw new RuntimeException("Lỗi khi xóa phòng ban theo ID: " + id, e);
+        }
     }
 
     @Override
     public List<Department> findAll() {
-        return List.of();
+        try {
+            // Sử dụng JPQL để lấy toàn bộ danh sách phòng ban
+            String jpql = "SELECT d FROM Department d";
+            return entityManager.createQuery(jpql, Department.class).getResultList();
+        } catch (Exception ex) {
+            throw new RuntimeException("Lỗi khi lấy danh sách toàn bộ phòng ban", ex);
+        }
     }
 }
