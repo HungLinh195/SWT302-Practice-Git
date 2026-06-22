@@ -18,10 +18,6 @@ public class JobServiceImpl implements JobService {
         this.jobDao = jobDao;
     }
 
-//    public void setJobDao(JobDao jobDao) {
-//        this.jobDao = jobDao;
-//    }
-
     @Override
     public Job findById(Long id) {
         // Validate, rule?
